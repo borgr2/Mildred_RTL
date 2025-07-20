@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chicken Business Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      background: #f9f9f9;
+    }
+
+    h2, h3 {
+      text-align: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 30px;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #eee;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 5px 10px;
+      margin: 2px;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background-color: #ffcc00;
+    }
+
+    .save-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      tr {
+        margin-bottom: 15px;
+      }
+
+      td, th {
+        text-align: left;
+        padding: 10px;
+        border: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      td::before {
+        content: attr(data-label);
+        font-weight: bold;
+        display: inline-block;
+        width: 120px;
+      }
+
+      th {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Chicken Business Tracker</h2>
+
+  <!-- Expenses -->
+  <h3>Expenses</h3>
+  <input type="text" id="productName" placeholder="Product Name">
+  <input type="number" id="productAmount" placeholder="Amount">
+  <input type="number" id="productPrice" placeholder="Price">
+  <button onclick="addExpense()">Add Expense</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Product Name</th>
+        <th>Amount</th>
+        <th>Price</th>
+        <th>Total Price</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="expenseTable"></tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><strong>Total Expenses</strong></td>
+        <td colspan="2" id="totalExpenses">₱0</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Chicken Count -->
+  <h3>Chicken Count</h3>
+  <input type="number" id="chickenOrdered" placeholder="Amount Ordered">
+  <input type="number" id="casualties" placeholder="Casualties">
+  <button onclick="updateChickenCount()">Update Count</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Amount Ordered</th>
+        <th>Casualties</th>
+        <th>Customer Orders</th>
+        <th>Remaining</th>
+      </tr>
+    </thead>
+    <tbody id="chickenCountTable"></tbody>
+  </table>
+
+  <!-- Customer Orders -->
+  <h3>Customer Orders</h3>
+  <input type="text" id="customerName" placeholder="Customer Name">
+  <input type="text" id="customerLocation" placeholder="Location">
+  <input type="number" id="customerAmount" placeholder="Amount Ordered">
+  <input type="number" id="chickenPrice" placeholder="Price per Head">
+  <input type="number" id="amountPaid" placeholder="Amount Paid">
+  <button onclick="addCustomerOrder()">Add Order</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Location</th>
+        <th>Amount Ordered</th>
+        <th>Chicken Price</th>
+        <th>Total</th>
+        <th>Amount Paid</th>
+        <th>Balance</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="customerTable"></tbody>
+  </table>
+
+  <script>
+    function confirmDelete(callback) {
+      if (confirm("Are you sure you want to delete this entry?")) {
+        callback();
+        alert("Entry deleted.");
+      }
+    }
+
+    function alertChange() {
+      alert("Changes saved successfully!");
+    }
+
+    function addExpense() {
+      const name = document.getElementById("productName").value;
+      const amount = +document.getElementById("productAmount").value;
+      const price = +document.getElementById("productPrice").value;
+      const total = amount * price;
+
+      const table = document.getElementById("expenseTable");
+      const row = table.insertRow();
+
+      row.innerHTML = `
+        <td>${name}</td>
+        <td>${amount}</td>
+        <td>${price}</td>
+        <td>${total.toFixed(2)}</td>
+        <td>
+          <button class='edit-btn' onclick='editRow(this)'>Edit</button>
+          <button class='save-btn' style='display:none;' onclick='saveExpenseRow(this)'>Save</button>
+          <button class='delete-btn' onclick='confirmDelete(() => this.closest("tr").remove()); calculateExpenses();'>Delete</button>
+        </td>`;
+      calculateExpenses();
+
+      document.getElementById("productName").value = "";
+      document.getElementById("productAmount").value = "";
+      document.getElementById("productPrice").value = "";
+    }
+
+    function editRow(button) {
+      const row = button.closest("tr");
+      [...row.cells].forEach((cell, index) => {
+        if (index < 3) cell.contentEditable = true;
+      });
+      row.querySelector('.edit-btn').style.display = "none";
+      row.querySelector('.save-btn').style.display = "inline-block";
+    }
+
+    function saveExpenseRow(button) {
+      const row = button.closest("tr");
+      [...row.cells].forEach((cell, index) => {
+        if (index < 3) cell.contentEditable = false;
+      });
+      row.querySelector('.edit-btn').style.display = "inline-block";
+      row.querySelector('.save-btn').style.display = "none";
+      calculateExpenses();
+      alertChange();
+    }
+
+    function calculateExpenses() {
+      let total = 0;
+      const rows = document.querySelectorAll("#expenseTable tr");
+      rows.forEach(row => {
+        const amount = +row.cells[1].innerText;
+        const price = +row.cells[2].innerText;
+        const rowTotal = amount * price;
+        if (!isNaN(rowTotal)) {
+          total += rowTotal;
+          row.cells[3].innerText = rowTotal.toFixed(2);
+        }
+      });
+      document.getElementById("totalExpenses").innerText = `₱${total.toFixed(2)}`;
+    }
+
+    function updateChickenCount() {
+      const ordered = +document.getElementById("chickenOrdered").value;
+      const casualties = +document.getElementById("casualties").value;
+      const customerOrders = document.querySelectorAll("#customerTable tr");
+
+      let customerTotal = 0;
+      customerOrders.forEach(row => {
+        customerTotal += +row.cells[2].innerText;
+      });
+
+      const remaining = ordered - casualties - customerTotal;
+      const table = document.getElementById("chickenCountTable");
+      table.innerHTML = `
+        <tr>
+          <td>${ordered}</td>
+          <td>${casualties}</td>
+          <td>${customerTotal}</td>
+          <td>${remaining}</td>
+        </tr>`;
+    }
+
+    function addCustomerOrder() {
+      const name = document.getElementById("customerName").value;
+      const location = document.getElementById("customerLocation").value;
+      const amount = +document.getElementById("customerAmount").value;
+      const price = +document.getElementById("chickenPrice").value;
+      const paid = +document.getElementById("amountPaid").value;
+      const total = amount * price;
+      const balance = total - paid;
+
+      const table = document.getElementById("customerTable");
+      const row = table.insertRow();
+
+      row.innerHTML = `
+        <td>${name}</td>
+        <td>${location}</td>
+        <td>${amount}</td>
+        <td>${price}</td>
+        <td>${total}</td>
+        <td>${paid}</td>
+        <td>${balance}</td>
+        <td>
+          <button class='edit-btn' onclick='editCustomerRow(this)'>Edit</button>
+          <button class='save-btn' style='display:none;' onclick='saveCustomerRow(this)'>Save</button>
+          <button class='delete-btn' onclick='confirmDelete(() => this.closest("tr").remove()); updateChickenCount();'>Delete</button>
+        </td>`;
+
+      updateChickenCount();
+
+      document.getElementById("customerName").value = "";
+      document.getElementById("customerLocation").value = "";
+      document.getElementById("customerAmount").value = "";
+      document.getElementById("chickenPrice").value = "";
+      document.getElementById("amountPaid").value = "";
+    }
+
+    function editCustomerRow(button) {
+      const row = button.closest("tr");
+      row.cells[0].contentEditable = true;
+      row.cells[1].contentEditable = true;
+      row.cells[2].contentEditable = true;
+      row.cells[3].contentEditable = true;
+      row.cells[5].contentEditable = true;
+      row.querySelector('.edit-btn').style.display = "none";
+      row.querySelector('.save-btn').style.display = "inline-block";
+    }
+
+    function saveCustomerRow(button) {
+      const row = button.closest("tr");
+      row.cells[0].contentEditable = false;
+      row.cells[1].contentEditable = false;
+      row.cells[2].contentEditable = false;
+      row.cells[3].contentEditable = false;
+      row.cells[5].contentEditable = false;
+
+      const amount = +row.cells[2].innerText;
+      const price = +row.cells[3].innerText;
+      const paid = +row.cells[5].innerText;
+      const total = amount * price;
+      const balance = total - paid;
+
+      row.cells[4].innerText = total.toFixed(2);
+      row.cells[6].innerText = balance.toFixed(2);
+
+      row.querySelector('.edit-btn').style.display = "inline-block";
+      row.querySelector('.save-btn').style.display = "none";
+
+      updateChickenCount();
+      alertChange();
+    }
+  </script>
+</body>
+
+</html>
